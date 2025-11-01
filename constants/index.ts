@@ -21,6 +21,7 @@ export const voices = {
   female: { casual: "ZIlrSGI4jZqobxRKprJz", formal: "sarah" },
 };
 
+// dummy data for now
 export const recentSessions = [
   {
     id: "1",
