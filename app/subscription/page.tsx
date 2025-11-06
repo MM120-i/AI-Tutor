@@ -1,5 +1,12 @@
+import { PricingTable } from "@clerk/nextjs";
+
 const Subscription = () => {
-  return <div>Subscription</div>;
+  // db key: KeYbYNwyQBKt6VwC
+  return (
+    <div>
+      <PricingTable />
+    </div>
+  );
 };
 
 export default Subscription;
