@@ -1,19 +1,26 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Input } from "./ui/input";
 import { formUrlQuery, removeKeysFromUrlQuery } from "@jsmastery/utils";
+import { Search } from "lucide-react";
 
 const SearchInput = () => {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const query = searchParams.get("topic") || "";
   const [searchQuery, setSearchQuery] = useState("");
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
+    // Skip initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const delayDebounceFn = setTimeout(() => {
       if (searchQuery) {
         const newUrl = formUrlQuery({
@@ -22,7 +29,7 @@ const SearchInput = () => {
           value: searchQuery,
         });
 
-        router.push(newUrl, { scroll: false });
+        router.push(newUrl);
       } else {
         if (pathname === "/companions") {
           const newUrl = removeKeysFromUrlQuery({
@@ -30,18 +37,26 @@ const SearchInput = () => {
             keysToRemove: ["topic"],
           });
 
-          router.push(newUrl, { scroll: false });
+          router.push(newUrl);
         }
       }
     }, 500);
-  }, [searchQuery, router, searchParams, pathname]);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, pathname]);
 
   return (
-    <div className="relative border border-black rounded-lg items-center flex gap-2 px-2 py-1 h-fit">
-      <Image src={"/icons/search.svg"} alt={"search"} width={15} height={15} />
+    <div className="relative flex items-center gap-2 w-[270px] rounded-lg border border-black px-3 py-2">
+      <Image
+        src="/icons/search.svg"
+        alt="search"
+        width={18}
+        height={18}
+        className="opacity-70"
+      />
       <Input
-        placeholder="Search companions..."
-        className="outline-none"
+        placeholder="Search your companions..."
+        className="w-full border-none outline-none focus-visible:ring-0 shadow-none py-5.1"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />
