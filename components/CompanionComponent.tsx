@@ -1,5 +1,8 @@
 "use client";
 
+// TODO: This functionality needs more fine-tuning
+// delete log statements and shit
+
 import { cn, configureAssistant, getSubjectColor } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +21,6 @@ const CompanionComponent = ({
   name,
   subject,
   topic,
-  companionId,
   style,
   userName,
   userImage,
@@ -28,6 +30,7 @@ const CompanionComponent = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const lottieRef = useRef<LottieRefCurrentProps>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [messages, setMessages] = useState<SavedMessage[]>([]);
 
   useEffect(() => {
     if (lottieRef) {
@@ -40,14 +43,63 @@ const CompanionComponent = ({
   }, [isSpeaking, lottieRef]);
 
   useEffect(() => {
-    const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
-    const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
+    const onCallStart = () => {
+      console.log("✅ VAPI call started");
+      setCallStatus(CallStatus.ACTIVE);
+    };
+
+    const onCallEnd = () => {
+      console.log("❌ VAPI call ended");
+      setCallStatus(CallStatus.FINISHED);
+    };
 
     // TODO:
-    const onMessage = () => {};
-    const onSpeechStart = () => setIsSpeaking(true);
-    const onSpeechEnd = () => setIsSpeaking(false);
-    const onError = (error: Error) => console.log("Error", error);
+    const onMessage = (message: Message) => {
+      console.log("📨 VAPI message:", message);
+
+      if (message.type === "transcript" && message.transcriptType === "final") {
+        const newMessage = {
+          role: message.role,
+          content: message.transcript,
+        };
+
+        setMessages((prev) => [newMessage, ...prev]);
+      }
+    };
+
+    const onSpeechStart = () => {
+      console.log("🎤 Speech started");
+      setIsSpeaking(true);
+    };
+
+    const onSpeechEnd = () => {
+      console.log("🔇 Speech ended");
+      setIsSpeaking(false);
+    };
+
+    const onError = (error: any) => {
+      console.error("❌ VAPI Error Type:", error?.type);
+      console.error("❌ VAPI Error Stage:", error?.stage);
+
+      if (error?.error instanceof Response) {
+        console.error("❌ Response Status:", error.error.status);
+        console.error("❌ Response StatusText:", error.error.statusText);
+        console.error("❌ Response Type:", error.error.type);
+        console.error("❌ Response URL:", error.error.url);
+
+        // Try to read response body
+        error.error
+          .clone()
+          .text()
+          .then((text: string) => {
+            console.error("❌ Response Body:", text);
+          })
+          .catch((e: any) => console.error("Could not read response body:", e));
+      }
+
+      console.error("Full error object:", error);
+      setCallStatus(CallStatus.INACTIVE);
+    };
 
     // vapi event listeners
     vapi.on("call-start", onCallStart);
@@ -74,11 +126,17 @@ const CompanionComponent = ({
     setIsMuted(!isMuted);
   };
 
-  // TODO:
-  const handleDisconnect = () => {};
+  const handleDisconnect = () => {
+    setCallStatus(CallStatus.FINISHED);
+    vapi.stop();
+  };
 
   const handleCall = async () => {
+    console.log("🟢 handleCall triggered");
     setCallStatus(CallStatus.CONNECTING);
+
+    const assistantConfig = configureAssistant(voice, style);
+    console.log("🔧 Assistant config:", assistantConfig);
 
     const assistantOverrides = {
       variableValues: {
@@ -86,12 +144,20 @@ const CompanionComponent = ({
         topic,
         style,
       },
-      clientMessages: ["transcripts"],
+      clientMessages: ["transcript"],
       serverMessages: [],
     };
 
-    // @ts-expect-error
-    vapi.start(configureAssistant(voice, style), assistantOverrides);
+    console.log("🚀 Starting vapi with overrides:", assistantOverrides);
+
+    try {
+      // @ts-expect-error
+      await vapi.start(assistantConfig, assistantOverrides);
+      console.log("✅ vapi.start() completed");
+    } catch (error) {
+      console.error("❌ vapi.start() failed:", error);
+      setCallStatus(CallStatus.INACTIVE);
+    }
   };
 
   return (
@@ -152,7 +218,11 @@ const CompanionComponent = ({
           </div>
 
           {/* mic button */}
-          <button className="btn-mic" onClick={toggleMicrophone}>
+          <button
+            className="btn-mic"
+            onClick={toggleMicrophone}
+            disabled={callStatus !== CallStatus.ACTIVE}
+          >
             <Image
               src={isMuted ? "/icons/mic-off.svg" : "/icons/mic-on.svg"}
               alt="mic"
@@ -186,7 +256,23 @@ const CompanionComponent = ({
 
       {/* Displays transcript */}
       <section className="transcript">
-        <div className="transcript-message no-scrollbar">MESSAGES</div>
+        <div className="transcript-message no-scrollbar">
+          {messages.map((message, index) => {
+            if (message.role === "user") {
+              return (
+                <p key={index} className="max-sm:text-sm">
+                  {userName}:{message.content}
+                </p>
+              );
+            } else {
+              return (
+                <p key={index} className="text-primary max-sm:text-sm">
+                  {name} : {message.content}
+                </p>
+              );
+            }
+          })}
+        </div>
         <div className="transcript-fade" />
       </section>
     </section>
