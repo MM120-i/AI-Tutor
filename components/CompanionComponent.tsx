@@ -53,7 +53,6 @@ const CompanionComponent = ({
       setCallStatus(CallStatus.FINISHED);
     };
 
-    // TODO:
     const onMessage = (message: Message) => {
       console.log("📨 VAPI message:", message);
 
