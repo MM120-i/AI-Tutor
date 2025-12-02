@@ -5,7 +5,6 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Input } from "./ui/input";
 import { formUrlQuery, removeKeysFromUrlQuery } from "@jsmastery/utils";
-import { Search } from "lucide-react";
 
 const SearchInput = () => {
   const pathname = usePathname();

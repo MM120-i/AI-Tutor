@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Lottie, { LottieRefCurrentProps } from "lottie-react";
 import soundwaves from "@/constants/soundwaves.json";
+import { addToSessionHistory } from "@/lib/actions/companion.actions";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -25,6 +26,7 @@ const CompanionComponent = ({
   userName,
   userImage,
   voice,
+  companionId,
 }: CompanionComponentProps) => {
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -51,6 +53,7 @@ const CompanionComponent = ({
     const onCallEnd = () => {
       console.log("❌ VAPI call ended");
       setCallStatus(CallStatus.FINISHED);
+      addToSessionHistory(companionId);
     };
 
     const onMessage = (message: Message) => {
